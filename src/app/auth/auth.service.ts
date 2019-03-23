@@ -14,7 +14,7 @@ import { map } from 'rxjs/operators';
 import { User } from './user.model';
 import { Store } from '@ngrx/store';
 import { AppState } from '../app.reducer';
-import { SetUserAction } from './auth.actions';
+import { SetUserAction, UnsetUserAction } from './auth.actions';
 import { Subscription } from 'rxjs';
 
 
@@ -24,6 +24,7 @@ import { Subscription } from 'rxjs';
 export class AuthService {
 
   private userSubscription: Subscription = new Subscription();
+  private usuario: User;
 
   constructor( private afAuth: AngularFireAuth,
                private router: Router,
@@ -35,13 +36,17 @@ export class AuthService {
     this.afAuth.authState.subscribe( (fbUser: firebase.User ) => {
 
                   if ( fbUser ) {
+
                     this.userSubscription = this.afDB.doc(`${ fbUser.uid }/usuario`).valueChanges()
                         .subscribe( (usuarioObj: any) => {
                           const newUser = new User( usuarioObj );
                           this.store.dispatch( new SetUserAction( newUser ) );
+                          this.usuario = newUser;
+
                         });
                   } else {
-                      this.userSubscription.unsubscribe();
+                    this.usuario = null;
+                    this.userSubscription.unsubscribe();
                   }
 
     });
@@ -94,6 +99,8 @@ export class AuthService {
 
   logout() {
 
+    this.store.dispatch( new UnsetUserAction() );
+
     this.router.navigate( ['/login'] );
     this.afAuth.auth.signOut();
 
@@ -111,6 +118,11 @@ export class AuthService {
           return fbUser != null;
         } )
       );
+  }
+
+
+  getUsuario() {
+    return {...this.usuario};
   }
 
 
